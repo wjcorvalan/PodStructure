@@ -55,9 +55,22 @@ sudo tee /home/$USER/.config/containers/storage.conf > /dev/null <<EOF
   mount_program = "/usr/bin/fuse-overlayfs"
 EOF
 
+# Eliminar entorno inicial
+echo "Eliminando entorno inicial..."
+sudo rm -rf /home/$USER/.local/share/containers
+sudo rm -rf /home/$USER/.cache/containers
+
+# Reiniciar podman al usuario 
+echo "Reiniciando poddman al usuario $USER"
+sudo -u "$USER" podman system reset --force
+
 # Cambiar propietario del directorio .config
 echo "Configurando permisos del directorio .config..."
 sudo chown -R $USER:$USER /home/$USER/.config
+
+# Verificacion
+echo "Verificnado Entorno actual"
+sudo -u "$USER" bash -c "cd /tmp && podman info | grep -E 'graphRoot|runRoot|graphDriverName'"
 
 echo ""
 echo "✓ Configuración completada exitosamente para el usuario: $USER"
