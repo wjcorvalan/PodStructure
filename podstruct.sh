@@ -23,8 +23,20 @@ if ! id "$USER" &>/dev/null; then
     exit 1
 fi
 
+# Verificar que el servidor tiene la estructura base profesional
+for dir in /srv/podman /srv/compose /srv/data; do
+    if [ ! -d "$dir" ]; then
+        echo "ERROR: La carpeta base $dir no existe. Ejecute la configuración inicial primero."
+        exit 1
+    fi
+done
+
 # Obtener el UID del usuario
 USER_UID=$(id -u "$USER")
+
+# Asegurar que el usuario tenga persistencia ---
+echo "Activando persistencia (Linger) para $USER..."
+sudo loginctl enable-linger "$USER"
 
 echo "Configurando directorios para el usuario: $USER (UID: $USER_UID)"
 
@@ -38,9 +50,9 @@ sudo chown -R $USER:$USER /srv/podman/$USER /srv/compose/$USER /srv/data/$USER
 
 # Configurar permisos
 echo "Configurando permisos de acceso..."
-sudo chmod -R 750 /srv/podman/$USER /srv/compose/$USER /srv/data/$USER
+sudo chmod -R 700 /srv/podman/$USER /srv/compose/$USER /srv/data/$USER
 
-# Crear directorio de configuración de containers
+# Crear directorio de configuración de servicio para el usuario
 echo "Creando directorio de configuración..."
 sudo mkdir -p /home/$USER/.config/containers/systemd/
 
@@ -55,6 +67,9 @@ sudo tee /home/$USER/.config/containers/storage.conf > /dev/null <<EOF
   mount_program = "/usr/bin/fuse-overlayfs"
 EOF
 
+#Cambiar el duenio de la carpeta
+sudo chown -R $USER:$USER /home/$USER/.config
+
 # Eliminar entorno inicial
 echo "Eliminando entorno inicial..."
 sudo rm -rf /home/$USER/.local/share/containers
@@ -62,15 +77,13 @@ sudo rm -rf /home/$USER/.cache/containers
 
 # Reiniciar podman al usuario 
 echo "Reiniciando poddman al usuario $USER"
-sudo -u "$USER" podman system reset --force
-
-# Cambiar propietario del directorio .config
-echo "Configurando permisos del directorio .config..."
-sudo chown -R $USER:$USER /home/$USER/.config
+#sudo -u "$USER" podman system reset --force
+sudo -u "$USER" -H bash -c "export XDG_RUNTIME_DIR=/run/user/$USER_UID; podman system reset --force"
 
 # Verificacion
 echo "Verificando Entorno actual"
-sudo -u $USER bash -c "cd /tmp && podman info | grep -E 'graphRoot|runRoot|graphDriverName'"
+#sudo -u $USER bash -c "cd /tmp && podman info | grep -E 'graphRoot|runRoot|graphDriverName'"
+sudo -u "$USER" -H bash -c "XDG_RUNTIME_DIR=/run/user/$USER_UID podman info | grep -E 'graphRoot|runRoot|graphDriverName'"
 
 echo ""
 echo "✓ Configuración completada exitosamente para el usuario: $USER"
