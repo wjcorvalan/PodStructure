@@ -42,7 +42,7 @@ sudo chmod -R 750 /srv/podman/$USER /srv/compose/$USER /srv/data/$USER
 
 # Crear directorio de configuración de containers
 echo "Creando directorio de configuración..."
-sudo mkdir -p /home/$USER/.config/containers
+sudo mkdir -p /home/$USER/.config/containers/systemd/
 
 # Crear archivo storage.conf
 echo "Generando archivo de configuración storage.conf..."
