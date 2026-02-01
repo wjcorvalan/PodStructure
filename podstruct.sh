@@ -69,8 +69,8 @@ echo "Configurando permisos del directorio .config..."
 sudo chown -R $USER:$USER /home/$USER/.config
 
 # Verificacion
-echo "Verificnado Entorno actual"
-sudo -u "$USER" bash -c "cd /tmp && podman info | grep -E 'graphRoot|runRoot|graphDriverName'"
+echo "Verificando Entorno actual"
+sudo -u $USER bash -c "cd /tmp && podman info | grep -E 'graphRoot|runRoot|graphDriverName'"
 
 echo ""
 echo "✓ Configuración completada exitosamente para el usuario: $USER"
