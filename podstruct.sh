@@ -37,9 +37,9 @@ USER_UID=$(id -u "$USER")
 # Asegurar que el usuario tenga persistencia ---
 echo "Activando persistencia (Linger) para $USER..."
 sudo loginctl enable-linger "$USER"
+sudo loginctl show-user "$USER" | grep Linger
 
 echo "Configurando directorios para el usuario: $USER (UID: $USER_UID)"
-
 # Crear directorios
 echo "Creando directorios..."
 sudo mkdir -p /srv/podman/$USER/storage /srv/compose/$USER /srv/data/$USER
