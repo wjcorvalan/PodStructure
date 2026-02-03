@@ -34,6 +34,12 @@ done
 # Obtener el UID del usuario
 USER_UID=$(id -u "$USER")
 
+# === CRÍTICO: Inicializar entorno del usuario antes de nada ===
+echo "Inicializando entorno para $USER..."
+sudo mkdir -p "/run/user/$USER_UID"
+sudo chown "$USER:$USER" "/run/user/$USER_UID"
+sudo chmod 700 "/run/user/$USER_UID"
+
 # Asegurar que el usuario tenga persistencia ---
 echo "Activando persistencia (Linger) para $USER..."
 sudo loginctl enable-linger $USER
@@ -70,15 +76,59 @@ EOF
 #Cambiar el duenio de la carpeta
 sudo chown -R $USER:$USER /home/$USER/.config
 
-# Eliminar entorno inicial
+# Eliminar entorno inicial (PERO solo después de tener XDG_RUNTIME_DIR)
 echo "Eliminando entorno inicial..."
-sudo rm -rf /home/$USER/.local/share/containers
-sudo rm -rf /home/$USER/.cache/containers
+sudo -u "$USER" bash -c "
+    export XDG_RUNTIME_DIR=\"/run/user/$USER_UID\"
+    rm -rf /home/$USER/.local/share/containers 2>/dev/null || true
+    rm -rf /home/$USER/.cache/containers 2>/dev/null || true
+"
+# Eliminar entorno inicial
+#echo "Eliminando entorno inicial..."
+#sudo rm -rf /home/$USER/.local/share/containers
+#sudo rm -rf /home/$USER/.cache/containers
+
+# === IMPORTANTE: Forzar login y inicialización antes del reset ===
+echo "Inicializando Podman para $USER (esto puede tomar unos segundos)..."
+sudo -i -u "$USER" << 'INIT_EOF'
+    # Este es un login completo que inicializa el entorno
+    echo "Usuario activo: $(whoami)"
+    echo "HOME: $HOME"
+    echo "XDG_RUNTIME_DIR: ${XDG_RUNTIME_DIR:-No definido}"
+    
+    # Forzar creación de directorios Podman
+    mkdir -p "${XDG_RUNTIME_DIR}/containers" 2>/dev/null || true
+    
+    # Primera llamada a Podman (inicializa)
+    podman version >/dev/null 2>&1 || true
+    sleep 1
+INIT_EOF
+
+sudo -u "$USER" bash -c "
+    export XDG_RUNTIME_DIR=\"/run/user/$USER_UID\"
+    export CONTAINERS_CONF=\"/home/$USER/.config/containers/containers.conf\"
+    
+    echo '=== Ejecutando podman system reset ==='
+    cd /tmp
+    
+    # Ejecutar y filtrar mensajes inofensivos
+    output=\$(podman system reset --force 2>&1)
+    
+    # Mostrar solo mensajes relevantes
+    echo \"\$output\" | grep -v -E \
+        'config file exists|Remove this file|no such file or directory|umount|level=error'
+    
+    # Si no hubo output útil, mostrar mensaje de éxito
+    if [ -z \"\$(echo \"\$output\" | grep -v -E 'config file exists|Remove this file|no such file or directory|umount|level=error')\" ]; then
+        echo '✓ Podman reiniciado exitosamente'
+    fi
+"
+
 
 # Reiniciar podman al usuario 
-echo "Reiniciando poddman al usuario $USER"
-sleep 2
-sudo -u $USER bash -c "cd /tmp && podman system reset --force 2>&1 | grep -v -E 'config file exists|Remove this file'"
+#echo "Reiniciando poddman al usuario $USER"
+#sleep 2
+#sudo -u $USER bash -c "cd /tmp && podman system reset --force 2>&1 | grep -v -E 'config file exists|Remove this file'"
 
 # Verificacion
 echo "Verificando Entorno actual"
