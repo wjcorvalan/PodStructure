@@ -77,7 +77,7 @@ sudo rm -rf /home/$USER/.cache/containers
 
 # Reiniciar podman al usuario 
 echo "Reiniciando poddman al usuario $USER"
-sudo -u "$USER" bash -c "cd /tmp && podman system reset --force 2>&1 | grep -v -E 'config file exists|Remove this file'"
+sudo -u $USER bash -c "cd /tmp && podman system reset --force 2>&1 | grep -v -E 'config file exists|Remove this file'"
 
 # Verificacion
 echo "Verificando Entorno actual"
