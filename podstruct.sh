@@ -22,14 +22,6 @@ if ! id "$USER" &>/dev/null; then
     exit 1
 fi
 
-# Verificar que el servidor tiene la estructura base profesional
-for dir in /srv/podman /srv/compose /srv/data; do
-    if [ ! -d "$dir" ]; then
-        echo "ERROR: La carpeta base $dir no existe. Ejecute la configuración inicial primero."
-        exit 1
-    fi
-done
-
 # Obtener el UID del usuario
 USER_UID=$(id -u "$USER")
 
@@ -77,17 +69,19 @@ sleep 2
 echo ""
 echo "==== Paso 3: Crear estructura de directorios ===="
 
-# Crear directorios
+# Crear directorios###############################################################################################################
 echo "Creando directorios en /srv/..."
-sudo mkdir -p /srv/podman/$USER/storage /srv/compose/$USER /srv/data/$USER
+#sudo mkdir -p /srv/podman/$USER/storage /srv/compose/$USER /srv/data/$USER
+sudo mkdir -p /srv/$USER/storage /srv/$USER/compose /srv/$USER/data
 
 # Cambiar propietario de los directorios
 echo "Configurando permisos de propietario..."
-sudo chown -R $USER:$USER /srv/podman/$USER /srv/compose/$USER /srv/data/$USER
+sudo chown -R $USER:$USER /srv/$USER
 
 # Configurar permisos
 echo "Configurando permisos de acceso..."
-sudo chmod -R 700 /srv/podman/$USER /srv/compose/$USER /srv/data/$USER
+sudo chmod 700 /srv/$USER/storage
+sudo chmod 755 /srv/$USER/compose /srv/$USER/data
 
 # Crear directorio de configuración
 echo "Creando directorios de configuración..."
@@ -99,9 +93,10 @@ sudo tee /home/$USER/.config/containers/storage.conf > /dev/null <<EOF
 [storage]
   driver = "overlay"
   runroot = "/run/user/$USER_UID/containers"
-  graphroot = "/srv/podman/$USER/storage"
-  [storage.options.overlay]
-  mount_program = "/usr/bin/fuse-overlayfs"
+  graphroot = "/srv/$USER/storage"
+  [storage.options]
+  #Si el kernel es nuevo, no necesitas fuse-overlayfs
+  #mount_program = "/usr/bin/fuse-overlayfs"
 EOF
 
 # Cambiar el dueño de la carpeta
@@ -147,6 +142,11 @@ else
     echo "Esto puede ser normal en la primera ejecución"
 fi
 
+echo "Configurando contextos de SELinux..."
+sudo semanage fcontext -a -t container_var_lib_t "/srv/$USER/storage(/.*)?"
+sudo semanage fcontext -a -t container_file_t "/srv/$USER/data(/.*)?"
+sudo restorecon -R -v /srv/$USER
+
 echo ""
 echo "=========================================="
 echo "✓ CONFIGURACIÓN COMPLETADA"
@@ -154,9 +154,9 @@ echo "=========================================="
 echo "Usuario: $USER (UID: $USER_UID)"
 echo ""
 echo "Directorios creados:"
-echo "  • Storage:  /srv/podman/$USER/storage"
-echo "  • Compose:  /srv/compose/$USER"
-echo "  • Data:     /srv/data/$USER"
+echo "  • Storage:  /srv/$USER/storage"
+echo "  • Compose:  /srv/$USER/compose"
+echo "  • Data:     /srv/$USER/data"
 echo ""
 echo "Configuración:"
 echo "  • Config:   /home/$USER/.config/containers/storage.conf"
