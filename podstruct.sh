@@ -131,7 +131,7 @@ sudo -u $USER bash -c "cd /tmp && podman system reset --force 2>&1" | \
 sleep 2
 
 echo ""
-echo "==== Paso 7: Verificación final ===="
+echo "==== Paso 7: Verificación ===="
 echo "Verificando configuración de Podman..."
 if sudo -u $USER bash -c "cd /tmp && podman info 2>/dev/null" > /dev/null; then
     echo "✓ Podman inicializado correctamente"
@@ -142,6 +142,8 @@ else
     echo "Esto puede ser normal en la primera ejecución"
 fi
 
+echo ""
+echo "==== Paso 8: SELinux ===="
 echo "Configurando contextos de SELinux..."
 sudo semanage fcontext -a -t container_var_lib_t "/srv/$USER/storage(/.*)?"
 sudo semanage fcontext -a -t container_file_t "/srv/$USER/data(/.*)?"
