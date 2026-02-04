@@ -145,7 +145,12 @@ fi
 echo "Configurando contextos de SELinux..."
 sudo semanage fcontext -a -t container_var_lib_t "/srv/$USER/storage(/.*)?"
 sudo semanage fcontext -a -t container_file_t "/srv/$USER/data(/.*)?"
-sudo restorecon -R -v /srv/$USER
+
+if sudo restorecon -R /srv/$USER; then
+    echo "✓ SELinux aplicado correctamente"
+else
+    echo "❌ Error al aplicar SELinux"
+fi
 
 echo ""
 echo "=========================================="
