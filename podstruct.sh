@@ -69,7 +69,7 @@ sleep 2
 echo ""
 echo "==== Paso 3: Crear estructura de directorios ===="
 
-# Crear directorios###############################################################################################################
+# Crear directorios
 echo "Creando directorios en /srv/..."
 #sudo mkdir -p /srv/podman/$USER/storage /srv/compose/$USER /srv/data/$USER
 sudo mkdir -p /srv/$USER/storage /srv/$USER/compose /srv/$USER/data
@@ -80,8 +80,10 @@ sudo chown -R $USER:$USER /srv/$USER
 
 # Configurar permisos
 echo "Configurando permisos de acceso..."
-sudo chmod 700 /srv/$USER/storage
-sudo chmod 755 /srv/$USER/compose /srv/$USER/data
+# Permisos para directorios (drwx------)
+sudo find /srv/$USER -type d -exec chmod 700 {} +
+# Permisos para archivos ( -rw-------)
+sudo find /srv/$USER -type f -exec chmod 600 {} +
 
 # Crear directorio de configuración
 echo "Creando directorios de configuración..."
@@ -97,6 +99,7 @@ sudo tee /home/$USER/.config/containers/storage.conf > /dev/null <<EOF
   [storage.options]
   #Si el kernel es nuevo, no necesitas fuse-overlayfs
   #mount_program = "/usr/bin/fuse-overlayfs"
+  mountopt = "nodev,metacopy=on"
 EOF
 
 # Cambiar el dueño de la carpeta
@@ -147,11 +150,22 @@ echo "==== Paso 8: SELinux ===="
 echo "Configurando contextos de SELinux..."
 sudo semanage fcontext -a -t container_var_lib_t "/srv/$USER/storage(/.*)?"
 sudo semanage fcontext -a -t container_file_t "/srv/$USER/data(/.*)?"
+sudo semanage fcontext -a -t container_file_t "/srv/$USER/compose(/.*)?"
 
 if sudo restorecon -R /srv/$USER; then
     echo "✓ SELinux aplicado correctamente"
 else
     echo "❌ Error al aplicar SELinux"
+fi
+
+# 4. Ajuste de Booleans para Rootless
+# Permite que los contenedores manejen sus propios cgroups (necesario en Rocky/RHEL)
+# Verificar si el boolean ya está activo
+if [ "$(getsebool container_manage_cgroup | awk '{print $3}')" = "off" ]; then
+    echo "Activando boolean de SELinux (esto puede tardar unos segundos)..."
+    sudo setsebool -P container_manage_cgroup on
+else
+    echo "✓ Boolean container_manage_cgroup ya estaba activo."
 fi
 
 echo ""
