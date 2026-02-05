@@ -99,7 +99,8 @@ sudo tee /home/$USER/.config/containers/storage.conf > /dev/null <<EOF
   [storage.options]
   #Si el kernel es nuevo, no necesitas fuse-overlayfs
   #mount_program = "/usr/bin/fuse-overlayfs"
-  mountopt = "nodev,metacopy=on"
+  #mountopt = "nodev,metacopy=on"
+  mountopt = "nodev"
 EOF
 
 # Cambiar el dueño de la carpeta
