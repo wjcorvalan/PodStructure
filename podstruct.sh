@@ -174,6 +174,10 @@ fi
 sudo setsebool -P container_map_any_file on
 # Opcional: Permite acceso a dispositivos si fuera necesario
 sudo setsebool -P container_use_devices on
+# Permite que el contenedor lea sus propios binarios en /srv
+sudo setsebool -P container_read_content_labels on
+#Permite que los dominios de contenedor ejecuten binarios etiquetados como var_lib
+sudo setsebool -P domain_can_mmap_files on 2>/dev/null || true
 
 echo "==== Paso 9: Configurando umask de seguridad para $USER ===="
 # Agregamos a .bashrc para sesiones interactivas
