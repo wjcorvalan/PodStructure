@@ -169,6 +169,14 @@ else
     echo "✓ Boolean container_manage_cgroup ya estaba activo."
 fi
 
+echo "==== Paso 9: Configurando umask de seguridad para $USER ===="
+# Agregamos a .bashrc para sesiones interactivas
+echo "umask 077" | sudo -u $USER tee -a /home/$USER/.bashrc > /dev/null
+# Agregamos a .bash_profile para asegurar en el login
+echo "umask 077" | sudo -u $USER tee -a /home/$USER/.bash_profile > /dev/null
+
+echo "✓ umask 077 configurado (archivos nuevos serán privados por defecto)"
+
 echo ""
 echo "=========================================="
 echo "✓ CONFIGURACIÓN COMPLETADA"
