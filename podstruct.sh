@@ -149,6 +149,7 @@ fi
 echo ""
 echo "==== Paso 8: SELinux ===="
 echo "Configurando contextos de SELinux..."
+#sudo semanage fcontext -a -t container_runtime_t "/srv/$USER/storage(/.*)?"
 sudo semanage fcontext -a -t container_var_lib_t "/srv/$USER/storage(/.*)?"
 sudo semanage fcontext -a -t container_file_t "/srv/$USER/data(/.*)?"
 sudo semanage fcontext -a -t container_file_t "/srv/$USER/compose(/.*)?"
@@ -168,6 +169,11 @@ if [ "$(getsebool container_manage_cgroup | awk '{print $3}')" = "off" ]; then
 else
     echo "✓ Boolean container_manage_cgroup ya estaba activo."
 fi
+
+# SOLUCIÓN RELRO: Permite mapeo de memoria necesario para Alpine/Musl
+sudo setsebool -P container_map_any_file on
+# Opcional: Permite acceso a dispositivos si fuera necesario
+sudo setsebool -P container_use_devices on
 
 echo "==== Paso 9: Configurando umask de seguridad para $USER ===="
 # Agregamos a .bashrc para sesiones interactivas
