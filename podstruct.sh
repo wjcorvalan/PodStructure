@@ -150,11 +150,12 @@ echo ""
 echo "==== Paso 8: SELinux ===="
 echo "Configurando contextos de SELinux..."
 #sudo semanage fcontext -a -t container_runtime_t "/srv/$USER/storage(/.*)?"
-sudo semanage fcontext -a -t container_var_lib_t "/srv/$USER/storage(/.*)?"
+#sudo semanage fcontext -a -t container_var_lib_t "/srv/$USER/storage(/.*)?"
+sudo semanage fcontext -a -t container_ro_file_t "/srv/$USER/storage(/.*)?"
 sudo semanage fcontext -a -t container_file_t "/srv/$USER/data(/.*)?"
 sudo semanage fcontext -a -t container_file_t "/srv/$USER/compose(/.*)?"
 
-if sudo restorecon -R /srv/$USER; then
+if sudo restorecon -R -F /srv/$USER; then
     echo "✓ SELinux aplicado correctamente"
 else
     echo "❌ Error al aplicar SELinux"
@@ -170,14 +171,12 @@ else
     echo "✓ Boolean container_manage_cgroup ya estaba activo."
 fi
 
-# SOLUCIÓN RELRO: Permite mapeo de memoria necesario para Alpine/Musl
-sudo setsebool -P container_map_any_file on
-# Opcional: Permite acceso a dispositivos si fuera necesario
-sudo setsebool -P container_use_devices on
-# Permite que el contenedor lea sus propios binarios en /srv
-sudo setsebool -P container_read_content_labels on
-#Permite que los dominios de contenedor ejecuten binarios etiquetados como var_lib
-sudo setsebool -P domain_can_mmap_files on 2>/dev/null || true
+sudo setsebool -P \
+    container_manage_cgroup=on \
+    container_map_any_file=on \
+    container_use_devices=on \
+    container_read_content_labels=on \
+    domain_can_mmap_files=on
 
 echo "==== Paso 9: Configurando umask de seguridad para $USER ===="
 # Agregamos a .bashrc para sesiones interactivas
