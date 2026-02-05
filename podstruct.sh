@@ -174,7 +174,7 @@ fi
 sudo setsebool -P \
     container_manage_cgroup=on \
     container_map_any_file=on \
-    container_use_devices=on \
+    container_use_devices=of \
     container_read_content_labels=on \
     domain_can_mmap_files=on
 
