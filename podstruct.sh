@@ -147,37 +147,25 @@ else
 fi
 
 echo ""
-echo "==== Paso 8: SELinux ===="
-echo "Configurando contextos de SELinux..."
-#sudo semanage fcontext -a -t container_runtime_t "/srv/$USER/storage(/.*)?"
-#sudo semanage fcontext -a -t container_var_lib_t "/srv/$USER/storage(/.*)?"
-sudo semanage fcontext -a -t container_ro_file_t "/srv/$USER/storage(/.*)?"
+echo "==== Paso 8: SELinux (Modo Compatible) ===="
+# Usamos container_file_t para storage porque Podman rootless necesita escribir
+# y montar capas sobre esos directorios.
+sudo semanage fcontext -a -t container_file_t "/srv/$USER/storage(/.*)?"
 sudo semanage fcontext -a -t container_file_t "/srv/$USER/data(/.*)?"
 sudo semanage fcontext -a -t container_file_t "/srv/$USER/compose(/.*)?"
 
-if sudo restorecon -R -F /srv/$USER; then
-    echo "✓ SELinux aplicado correctamente"
+# Aplicar los cambios
+if sudo restorecon -R -v /srv/$USER; then
+    echo "✓ SELinux aplicado con etiquetas compatibles"
 else
     echo "❌ Error al aplicar SELinux"
 fi
 
-# 4. Ajuste de Booleans para Rootless
-# Permite que los contenedores manejen sus propios cgroups (necesario en Rocky/RHEL)
-# Verificar si el boolean ya está activo
-if [ "$(getsebool container_manage_cgroup | awk '{print $3}')" = "off" ]; then
-    echo "Activando boolean de SELinux (esto puede tardar unos segundos)..."
-    sudo setsebool -P container_manage_cgroup on
-else
-    echo "✓ Boolean container_manage_cgroup ya estaba activo."
-fi
+# Booleans esenciales (Simplificado para evitar errores de escritura)
+echo "Ajustando Booleans de SELinux..."
+sudo setsebool -P container_manage_cgroup on
 
-sudo setsebool -P \
-    container_manage_cgroup=on \
-    container_map_any_file=on \
-    container_use_devices=of \
-    container_read_content_labels=on \
-    domain_can_mmap_files=on
-
+echo ""
 echo "==== Paso 9: Configurando umask de seguridad para $USER ===="
 # Agregamos a .bashrc para sesiones interactivas
 echo "umask 077" | sudo -u $USER tee -a /home/$USER/.bashrc > /dev/null
@@ -185,6 +173,22 @@ echo "umask 077" | sudo -u $USER tee -a /home/$USER/.bashrc > /dev/null
 echo "umask 077" | sudo -u $USER tee -a /home/$USER/.bash_profile > /dev/null
 
 echo "✓ umask 077 configurado (archivos nuevos serán privados por defecto)"
+
+# 9.1. Limpiar permisos previos
+sudo setfacl -bR /srv/$USER
+# 9.2. ACCESO CONTROLADO para 'data' (El contenido que sirve el contenedor)
+# El usuario tiene control total (rwx)
+sudo setfacl -m u:$USER:rwx /srv/$USER/data
+sudo setfacl -R -d -m u:$USER:rwx /srv/$USER/data
+
+# El contenedor (others) puede leer y entrar, pero NO editar ni borrar
+# Aplicar a lo existente:
+sudo find /srv/$USER/data -type d -exec setfacl -m o:rx {} +
+sudo find /srv/$USER/data -type f -exec setfacl -m o:r {} +
+# Configurar herencia para lo nuevo:
+sudo setfacl -R -d -m o:rx /srv/$USER/data
+
+echo "✓ Se crearon las ACL)"
 
 echo ""
 echo "=========================================="
