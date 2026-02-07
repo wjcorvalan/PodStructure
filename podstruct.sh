@@ -188,6 +188,10 @@ sudo find /srv/$USER/data -type f -exec setfacl -m o:r {} +
 # Configurar herencia para lo nuevo:
 sudo setfacl -R -d -m o:rx /srv/$USER/data
 
+ #9.3. El "Puente" de Acceso
+# Asegura que el servicio systemd pueda llegar a /data cuando no hay sesión activa.
+#sudo chmod 711 /srv/$USER
+
 echo "✓ Se crearon las ACL)"
 
 echo ""
